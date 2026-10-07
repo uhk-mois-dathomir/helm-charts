@@ -41,24 +41,8 @@ jobs:
           cp -f .chart-packages/*.tgz .chart-repo 2>/dev/null || true
           helm repo index .chart-repo --url "https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}"
 
-      - name: Add GitHub Pages landing page
-        run: |
-          cat > .chart-repo/index.html <<EOF
-          <!doctype html>
-          <html lang="en">
-            <head>
-              <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1">
-              <title>Helm Chart Repository</title>
-            </head>
-            <body>
-              <h1>Helm Chart Repository</h1>
-              <p>This GitHub Pages site hosts the Helm chart repository index.</p>
-              <p><a href="./index.yaml">Open index.yaml</a></p>
-            </body>
-          </html>
-          EOF
-          touch .chart-repo/.nojekyll
+      - name: Disable Jekyll
+        run: touch .chart-repo/.nojekyll
 
       - name: Publish to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
