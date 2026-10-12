@@ -1,0 +1,22 @@
+apiVersion: tunnel.pangolin.io/v1alpha1
+kind: PangolinBinding
+metadata:
+  name: {{ .Release.Name }}
+  # Operator resolves organizationRef/tunnelRef only in the binding's own namespace.
+  namespace: pangolin
+  labels:
+    {{- include "hurtz.labels" . | nindent 4 }}
+spec:
+  serviceRef:
+    name: {{ include "hurtz.fullname" . }}
+    namespace: {{ .Release.Namespace }}
+  organizationRef:
+    name: {{ .Values.pangolin.organization }}
+  tunnelRef:
+    name: {{ .Values.pangolin.tunnel }}
+  protocol: http
+  servicePort: 80
+  httpConfig:
+    subdomain: {{ .Values.pangolin.subdomain }}
+    domainName: {{ .Values.pangolin.domainName }}
+    sso: {{ .Values.pangolin.sso }}

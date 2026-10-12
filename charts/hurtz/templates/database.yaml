@@ -1,0 +1,68 @@
+{{- /*
+Database and role live in the shared CloudNativePG cluster. Database/DatabaseRole and the role's
+password Secret must be in the Cluster's namespace; the backend reads a copy in the release namespace.
+*/}}
+{{- $db := .Values.database }}
+{{- $clusterName := required "database.cluster.name is required" $db.cluster.name }}
+{{- $clusterNamespace := required "database.cluster.namespace is required" $db.cluster.namespace }}
+{{- $name := include "hurtz.dbResourceName" . }}
+{{- /* Reuse the existing password on upgrade; generate one only on first install. */}}
+{{- $existing := lookup "v1" "Secret" $clusterNamespace $name }}
+{{- $password := "" }}
+{{- if $existing }}
+{{- $password = index $existing.data "password" | b64dec }}
+{{- else }}
+{{- $password = randAlphaNum 32 }}
+{{- end }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $name }}
+  namespace: {{ $clusterNamespace }}
+  labels:
+    {{- include "hurtz.labels" . | nindent 4 }}
+    cnpg.io/reload: "true"
+type: kubernetes.io/basic-auth
+stringData:
+  username: {{ $db.username | quote }}
+  password: {{ $password | quote }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "hurtz.fullname" . }}-db
+  labels:
+    {{- include "hurtz.labels" . | nindent 4 }}
+type: kubernetes.io/basic-auth
+stringData:
+  username: {{ $db.username | quote }}
+  password: {{ $password | quote }}
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: {{ $name }}
+  namespace: {{ $clusterNamespace }}
+  labels:
+    {{- include "hurtz.labels" . | nindent 4 }}
+spec:
+  cluster:
+    name: {{ $clusterName }}
+  name: {{ $db.username }}
+  login: true
+  passwordSecret:
+    name: {{ $name }}
+---
+# databaseReclaimPolicy defaults to retain: helm uninstall keeps the data.
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: {{ $name }}
+  namespace: {{ $clusterNamespace }}
+  labels:
+    {{- include "hurtz.labels" . | nindent 4 }}
+spec:
+  cluster:
+    name: {{ $clusterName }}
+  name: {{ $db.name }}
+  owner: {{ $db.username }}

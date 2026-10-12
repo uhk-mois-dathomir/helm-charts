@@ -1,0 +1,109 @@
+{{- $fullname := include "hurtz.fullname" . }}
+{{- $publicUrl := include "hurtz.publicUrl" . }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullname }}-backend
+  labels:
+    {{- include "hurtz.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "hurtz.selectorLabels" (list . "backend") | nindent 4 }}
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-backend
+  labels:
+    {{- include "hurtz.labels" . | nindent 4 }}
+    {{- include "hurtz.selectorLabels" (list . "backend") | nindent 4 }}
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "hurtz.selectorLabels" (list . "backend") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "hurtz.selectorLabels" (list . "backend") | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        # Image uses the non-numeric USER node, which kubelet cannot verify as non-root.
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "3000"
+            - name: CORS_ORIGIN
+              value: {{ $publicUrl | quote }}
+            - name: AUTH_COOKIE_SECURE
+              value: "true"
+            # Frontend nginx passes the X-Forwarded-* headers set by Pangolin through unchanged,
+            # so the backend sees exactly one trusted hop.
+            - name: TRUST_PROXY
+              value: "true"
+            {{- if .Values.backend.mcpOAuth }}
+            - name: MCP_PUBLIC_URL
+              value: "{{ $publicUrl }}/mcp"
+            - name: MCP_OAUTH_ISSUER
+              value: {{ $publicUrl | quote }}
+            {{- end }}
+            - name: DB_HOST
+              value: "{{ .Values.database.cluster.name }}-rw.{{ .Values.database.cluster.namespace }}.svc"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: {{ .Values.database.name | quote }}
+            - name: DB_USERNAME
+              value: {{ .Values.database.username | quote }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullname }}-db
+                  key: password
+            {{- range $name, $value := .Values.backend.env }}
+            - name: {{ $name }}
+              value: {{ $value | quote }}
+            {{- end }}
+          # Pending migrations run on startup.
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+          # TCP only: a DB outage must not restart the pod.
+          livenessProbe:
+            tcpSocket:
+              port: http
+          {{- with .Values.backend.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
