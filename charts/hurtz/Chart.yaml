@@ -1,0 +1,6 @@
+apiVersion: v2
+name: hurtz
+description: Hurtz car rental (NestJS backend + static frontend) exposed through Pangolin
+type: application
+version: 0.1.0
+appVersion: "latest"

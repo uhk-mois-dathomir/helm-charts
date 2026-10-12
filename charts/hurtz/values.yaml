@@ -1,0 +1,40 @@
+imagePullSecrets: []
+
+backend:
+  image:
+    repository: ghcr.io/uhk-mois-dathomir/hurtz-backend
+    tag: "" # defaults to Chart.appVersion; pin a sha-xxxxxxx tag for reproducible deploys
+    pullPolicy: Always
+  # Keep 1: scheduled data maintenance runs in every replica.
+  replicaCount: 1
+  resources: {}
+  # Extra env vars, e.g. DATA_RETENTION_DAYS: "30"
+  env:
+    BUSINESS_TIME_ZONE: Europe/Prague
+  # Enables MCP_PUBLIC_URL / MCP_OAUTH_ISSUER (OAuth for external MCP clients).
+  mcpOAuth: true
+
+frontend:
+  image:
+    repository: ghcr.io/uhk-mois-dathomir/hurtz-frontend
+    tag: ""
+    pullPolicy: Always
+  replicaCount: 1
+  resources: {}
+
+database:
+  name: hurtz
+  username: hurtz
+  # Shared CloudNativePG Cluster (>= 1.30 for DatabaseRole). The chart creates the role and the
+  # database there; the password is generated on first install and reused on upgrades.
+  cluster:
+    name: "" # required
+    namespace: "" # required
+
+pangolin:
+  organization: pangolin-org
+  tunnel: k3s-homelab
+  subdomain: hurtz
+  domainName: "" # required; the app must know its public origin (CORS, cookies, OAuth issuer)
+  # false = public without Pangolin auth wall. Needed for customers and external MCP clients.
+  sso: false
