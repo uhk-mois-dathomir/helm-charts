@@ -1,0 +1,26 @@
+apiVersion: v1
+entries:
+  hurtz:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-12T11:14:46.831600144Z"
+    description: Hurtz car rental (NestJS backend + static frontend) exposed through
+      Pangolin
+    digest: 344a59c5e4b8cdbc1a9d5363dfa188a217be48edeccd840dd8e8c2bd02888132
+    name: hurtz
+    type: application
+    urls:
+    - https://uhk-mois-dathomir.github.io/helm-charts/hurtz-0.1.0.tgz
+    version: 0.1.0
+  nginx:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2026-10-12T11:14:46.832003907Z"
+    description: A Helm chart for Kubernetes
+    digest: b06822785c5a3a63caf5ca80a836b5bf16aeb792ffeb875219e286d590683c6e
+    name: nginx
+    type: application
+    urls:
+    - https://uhk-mois-dathomir.github.io/helm-charts/nginx-0.1.0.tgz
+    version: 0.1.0
+generated: "2026-10-12T11:14:46.831267422Z"
